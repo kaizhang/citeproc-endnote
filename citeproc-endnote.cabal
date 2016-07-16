@@ -39,8 +39,9 @@ executable citeproc-endnote
   main-is:             citeproc-endnote.hs
   -- other-modules:
   -- other-extensions:
+  hs-source-dirs:      app
   build-depends:
       base >=4.7 && <5.0
-    , citeproc-endnote
     , pandoc-types
+    , citeproc-endnote
   default-language:    Haskell2010
