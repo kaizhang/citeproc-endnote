@@ -6,19 +6,22 @@ import Text.XML.Light
 import           Text.CSL.Output.Plain
 import           Text.CSL.Reference    hiding (Value, processCites)
 import           Text.CSL.Style        hiding (Element)
+import Text.Printf (printf)
 
 refsToXml :: [Reference] -> Element
 refsToXml = unode "EndNote" . map refToXml
 
 refToXml :: Reference -> Element
 refToXml ref = case refType ref of
-    Article -> unode "Cite" [author_, year_, record_]
-    _ -> unode "Cite" [author_, year_, record_]
+    ArticleJournal -> unode "Cite" [recnum_, author_, year_, record_]
+    x -> error $ printf "Reference with type \"%s\" has NOT been implemented." (show x)
   where
     author_ = unode "Author" $ renderPlain $ familyName $ head $ author ref
     year_ = unode "Year" $ getYear ref
+    recnum_ = unode "RecNum" $ getId ref
+    rec_number_ = unode "rec-number" $ getId ref
     record_ = unode "record"
-        [ foreign_keys_, ref_type_, contributors_, titles_, pages_
+        [ rec_number_, foreign_keys_, ref_type_, contributors_, titles_, pages_
         , volume_, number_, dates_, isbn_, electronic_resource_num_ ]
     foreign_keys_ = unode "foreign-keys" $ unode "key"
         ( [ Attr (unqual "app") "\"EN\""
