@@ -2,42 +2,39 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 module Text.CSL.Extra.Utils  where
 
-import           Control.Monad.Reader
+import Text.XML.Light
 import           Text.CSL.Output.Plain
 import           Text.CSL.Reference    hiding (Value, processCites)
-import           Text.CSL.Style        hiding (Citation (..), Cite (..))
-import           Text.Printf           (printf)
+import           Text.CSL.Style        hiding (Element)
 
-infixl 5 <+>
-(<+>) :: Reader Reference String -> Reader Reference String -> Reader Reference String
-(<+>) x y = do
-    x' <- x
-    y' <- y
-    return $ x' ++ y'
+refsToXml :: [Reference] -> Element
+refsToXml = unode "EndNote" . map refToXml
 
-tag :: String -> String -> String
-tag name x = printf "&lt;%s&gt;%s&lt;/%s&gt;" name x name
-
-tagM :: String -> Reader Reference (String -> String)
-tagM name = return $ \x -> printf "&lt;%s&gt;%s&lt;/%s&gt;" name x name
-
-tag' :: String -> [String] -> String -> String
-tag' name p x = printf "&lt;%s %s&gt;%s&lt;/%s&gt;" name (unwords p) x name
-
-title_ :: Reader Reference String
-title_ = reader $ tag "title" . renderPlain . title
-
-author_ :: Reader Reference String
-author_ = reader $ tag "Author" . renderPlain . familyName . head . author
-
-authors_ :: Reader Reference String
-authors_ = reader $ tag "authors" . concatMap (tag "author") . getAuthors
-
-volume_ :: Reader Reference String
-volume_ = reader $ tag "volume" . renderPlain . volume
-
-isbn_ :: Reader Reference String
-isbn_ = reader $ tag "isbn" . unLiteral . isbn
+refToXml :: Reference -> Element
+refToXml ref = case refType ref of
+    Article -> unode "Cite" [author_, year_, record_]
+    _ -> unode "Cite" [author_, year_, record_]
+  where
+    author_ = unode "Author" $ renderPlain $ familyName $ head $ author ref
+    year_ = unode "Year" $ getYear ref
+    record_ = unode "record"
+        [ foreign_keys_, ref_type_, contributors_, titles_, pages_
+        , volume_, number_, dates_, isbn_, electronic_resource_num_ ]
+    foreign_keys_ = unode "foreign-keys" $ unode "key"
+        ( [ Attr (unqual "app") "\"EN\""
+          , Attr (unqual "db-id") $ show (getId ref) ], getId ref )
+    ref_type_ = unode "ref-type" (Attr (unqual "name") "Journal Article", "17")
+    contributors_ = unode "contributors" $ unode "authors" $
+        map (unode "author") $ getAuthors ref
+    titles_ = unode "titles" [ unode "title" $ renderPlain $ title ref
+                             , unode "secondary-title" $ getContainerTitle ref ]
+    pages_ = unode "pages" $ renderPlain $ page ref
+    volume_ = unode "volume" $ renderPlain $ volume ref
+    number_ = unode "number" $ renderPlain $ issue ref
+    dates_ = unode "dates" [ unode "year" $ getYear ref
+                           , unode "pub_dates" $ unode "date" $ getDate ref ]
+    isbn_ = unode "isbn" $ unLiteral $ isbn ref
+    electronic_resource_num_ = unode "electronic-resource-num" $ unLiteral $ doi ref
 
 getId :: Reference -> String
 getId = unLiteral . refId

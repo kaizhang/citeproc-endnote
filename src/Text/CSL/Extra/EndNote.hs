@@ -2,17 +2,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Text.CSL.Extra.EndNote (processCitesEndNote') where
 
-import           Control.Monad.Reader     (reader, runReader)
 import qualified Data.Map                 as M
 import           Data.Maybe               (mapMaybe)
 import           Text.CSL.Input.Bibutils  (convertRefs, readBiblioFile)
 import           Text.CSL.Reference       hiding (Value, processCites)
-import           Text.HTML.TagSoup.Entity (lookupEntity)
+import           Text.HTML.TagSoup.Entity (lookupEntity, escapeXML)
 import           Text.Pandoc
 import           Text.Pandoc.Shared       (stringify)
 
 import           System.Directory         (doesFileExist)
 import           System.FilePath
+import Text.XML.Light
 
 import           Text.CSL.Extra.Utils
 
@@ -30,34 +30,9 @@ mkEndNoteRef :: [Reference] -> Inline
 mkEndNoteRef refs = RawInline (Format "openxml") $ fldBegin ++ endnoteRefs ++ fldEnd
   where
     endnoteRefs = "<w:r><w:instrText xml:space=\"preserve\"> ADDIN EN.CITE " ++
-        tag "EndNote" (concatMap (runReader mkRefBody) refs) ++
-        "</w:instrText></w:r>"
+        refs' ++ "</w:instrText></w:r>"
 
-    mkRefBody = ( tagM "Cite" <*>
-        author_ <+>
-        reader (tag "Year" . getYear) <+>
-        ( tagM "record" <*>
-            ( tagM "foreign-keys" <*> reader (\r -> tag' "key"
-                [ "app=\"EN\"", "db-id=" ++ show (getId r)] "")
-            ) <+>
-            pure (tag' "ref-type" ["name=\"Journal Article\""] "17") <+>
-            (tagM "contributors" <*> authors_) <+>
-            ( tagM "titles" <*>
-                title_ <+>
-                (reader $ tag "secondary-title" . getContainerTitle)
-            ) <+>
-                       -- <> tag "pages" ""
-            volume_ <+>
-            ( tagM "dates" <*>
-                reader (tag "year" . getYear) <+>
-                (tagM "pub_dates" <*> reader (tag "date" . getDate))
-            ) <+>
-            isbn_
-        ) )
-
-    --case refType ref of
-    --Article ->
-    --_ -> error "cannot process this type"
+    refs' = escapeXML $ showElement $ refsToXml refs
 
 processCitesEndNote :: [Reference] -> Pandoc -> Pandoc
 processCitesEndNote refs doc = topDown (procC refs_map) doc

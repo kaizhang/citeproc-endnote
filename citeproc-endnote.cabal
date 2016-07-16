@@ -22,11 +22,11 @@ library
     , containers
     , directory
     , filepath
-    , mtl
     , pandoc
     , pandoc-citeproc
     , pandoc-types
     , tagsoup
+    , xml
   ghc-options: -Wall
   exposed-Modules:
     Text.CSL.Extra.EndNote
