@@ -13,15 +13,16 @@ refsToXml = unode "EndNote" . map refToXml
 
 refToXml :: Reference -> Element
 refToXml ref = case refType ref of
-    ArticleJournal -> unode "Cite" [recnum_, author_, year_, record_]
+    ArticleJournal -> unode "Cite" [author_, year_, record_]
+    NoType -> unode "Cite" [author_, year_, record_]
     x -> error $ printf "Reference with type \"%s\" has NOT been implemented." (show x)
   where
     author_ = unode "Author" $ renderPlain $ familyName $ head $ author ref
     year_ = unode "Year" $ getYear ref
-    recnum_ = unode "RecNum" $ getId ref
-    rec_number_ = unode "rec-number" $ getId ref
+    --recnum_ = unode "RecNum" $ getId ref
+    --rec_number_ = unode "rec-number" $ getId ref
     record_ = unode "record"
-        [ rec_number_, foreign_keys_, ref_type_, contributors_, titles_, pages_
+        [ foreign_keys_, ref_type_, contributors_, titles_, pages_
         , volume_, number_, dates_, isbn_, electronic_resource_num_ ]
     foreign_keys_ = unode "foreign-keys" $ unode "key"
         ( [ Attr (unqual "app") "\"EN\""
